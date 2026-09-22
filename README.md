@@ -1,18 +1,10 @@
 # React Native Message Input
 
-**Submit the autocorrected message. Clear the field. Keep typing.**
+A message input for React Native and Expo that applies iOS keyboard autocorrection before submitting the text and clears the field immediately after.
 
-A single-line message input for React Native and Expo that addresses two connected problems on iOS: submitting text while a keyboard correction is still pending, and clearing the input immediately after submission.
+On iOS, `MessageInput` commits the pending correction, reads the message, and clears the native field in one UI-thread operation. JavaScript receives the text through `onSubmit` after the field is empty. The keyboard stays open for the next message.
 
-A chat composer that sends its JavaScript draft and then clears the native field uses separate steps. When keyboard autocorrection is pending, that draft can lag behind the text the user expects to send. `MessageInput` handles the sequence inside the native iOS input:
-
-1. **Commit pending autocorrection** before reading the message.
-2. **Read and clear the field in one UI-thread operation**, keeping the keyboard open.
-3. **Deliver the corrected text to `onSubmit`**, with the input already ready for the next message.
-
-Both the keyboard Send key and your own send button use this path. No controlled draft, separate clear call, or timeout is needed in your app. You handle message delivery and style the composer to fit your UI.
-
-> Early release: iOS autocorrection behavior is still undergoing device validation. Android and web do not use the native iOS submission path.
+Works with the keyboard Send key and custom send buttons. Android and web use React Native's `TextInput` with the same component API.
 
 ## Installation
 
@@ -22,7 +14,7 @@ In an Expo app, use [Expo CLI](https://docs.expo.dev/more/expo-cli/#installing-d
 npx expo install @truckroute/message-input
 ```
 
-The command is `expo install`. Expo selects the package manager from your project's lockfile, or you can choose it explicitly with `--npm`, `--yarn`, `--pnpm`, or `--bun`.
+Expo selects the package manager from your project's lockfile.
 
 You can also install directly with your preferred package manager:
 
@@ -32,8 +24,6 @@ You can also install directly with your preferred package manager:
 | Yarn            | `yarn add @truckroute/message-input`    |
 | pnpm            | `pnpm add @truckroute/message-input`    |
 | Bun             | `bun add @truckroute/message-input`     |
-
-The package works with any of these package managers. It includes its TypeScript and native iOS sources, with no install-time scripts or JavaScript build step. Metro compiles the TypeScript in your app.
 
 ### Native setup
 
@@ -59,11 +49,9 @@ The iOS module is autolinked through Expo Modules. It requires a native build an
 | React Native | 0.76             |
 | React        | 18.3.1           |
 
-Use the React and React Native versions appropriate for your Expo SDK. The compatibility baseline is Expo SDK 52 / React Native 0.76 / React 18.3.1; the development environment uses SDK 57. Native keyboard behavior still requires device verification. The native module declares iOS 16.4 as its deployment target; your app must also meet the requirements of its Expo and React Native versions.
+Requires iOS 16.4 or later. Use the React and React Native versions supported by your Expo SDK.
 
-### Package size and dependencies
-
-There are no runtime `dependencies`. React, React Native, and Expo are peer dependencies supplied by your app. Development tools and test libraries are listed under `devDependencies`; they are not installed with this library or included in its npm archive. Only the source files, iOS module, module configuration, package metadata, README, and license are published.
+React, React Native, and Expo are peer dependencies. The package adds no runtime dependencies.
 
 ## Quick start
 
@@ -165,43 +153,15 @@ await input.current?.submit();
 | iOS           | Native `UITextField`     | Finalizes editing, reads text, and clears the field on the UI thread before emitting to JavaScript. |
 | Android / web | React Native `TextInput` | Uses React state and React Native input events; clears before calling `onSubmit`.                   |
 
-On iOS, submission finalizes marked text and moves/restores the selection to commit a pending correction before reading the field. This keeps the read-and-clear operation native, without a separate JavaScript clear command, private UIKit API, or timeout. Keyboard and input-method behavior still needs device testing; the fallback does not provide the same atomic operation.
+On iOS, the native field finalizes marked text and moves/restores the selection to commit pending autocorrection. Reading and clearing happen in the same native operation. Android and web handle submission through React Native input events and React state.
 
-The component is intentionally single-line. It does not expose controlled `value`, `onChangeText`, multiline input, or selection control. Your app provides the send button, attachments, message history, and keyboard-aware layout.
+The input is single-line and manages its own text. Controlled `value`, `onChangeText`, multiline input, and selection control are not supported.
 
 If you are migrating from a local copy of this module, remove it before installing the package and rebuild the app. Two native modules named `MessageInput` cannot be installed together.
 
-## Development
+## Contributing
 
-Use Node.js 24 or newer supported by Vitest, then install dependencies and run the checks with your preferred package manager:
-
-| Package manager | Install dependencies | Run checks       |
-| --------------- | -------------------- | ---------------- |
-| npm             | `npm install`        | `npm run check`  |
-| Yarn            | `yarn install`       | `yarn run check` |
-| pnpm            | `pnpm install`       | `pnpm run check` |
-| Bun             | `bun install`        | `bun run check`  |
-
-The checks run TypeScript, Prettier, and Vitest. Preview the published files with `npm pack --dry-run`.
-
-[example/composer.tsx](https://github.com/Truckroute-inc/react-native-message-input/blob/main/example/composer.tsx) is a component you can mount in an Expo development app, not a standalone example app. To test the packaged module, create a tarball with `npm pack`, install it in that app, and rebuild iOS.
-
-Automated checks cover TypeScript, formatting, and fallback submission behavior. They do not validate the native keyboard. Before a release, verify on a device:
-
-- Pending autocorrection with both the external Send button and keyboard Send key: one corrected message, an empty field, and the keyboard still open.
-- A cursor in the middle of text, emoji, pasted text, English/Russian keyboards, and marked-text input such as Japanese.
-- Empty and disabled submissions, `clear()`, `focus()`, maximum length, and a new draft surviving completion or failure of a previous send.
-- Placeholder, accessibility, light/dark appearance, and Android/web fallback behavior.
-
-### Publishing
-
-After completing the device checks above, update the version in `package.json` and verify the package contents with `npm pack --dry-run`. Publish from the repository with an npm account that has access to the `@truckroute` scope:
-
-```sh
-npm publish
-```
-
-`publishConfig` targets the public npm registry with public access. The `prepublishOnly` hook runs the repository checks before publication. It does not run when someone installs the package. The podspec reads the version from `package.json`.
+See the [development and release guide](https://github.com/Truckroute-inc/react-native-message-input/blob/main/CONTRIBUTING.md).
 
 ## Feedback
 
