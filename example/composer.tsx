@@ -22,7 +22,9 @@ export function Composer({ onSubmit }: { onSubmit: (text: string) => void }) {
       <Button
         title="Send"
         onPress={() => {
-          if (input.current !== null) void input.current.submit();
+          if (input.current !== null) {
+            void input.current.submit();
+          }
         }}
       />
     </View>

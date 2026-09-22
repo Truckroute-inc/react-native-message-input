@@ -2,6 +2,7 @@ import {
   createElement,
   forwardRef,
   useImperativeHandle,
+  useLayoutEffect,
   type ReactNode,
 } from "react";
 import type { TextInputProps } from "react-native";
@@ -27,7 +28,9 @@ export function View({ children }: { children: ReactNode }) {
 
 export const TextInput = forwardRef<typeof nativeInput, TextInputProps>(
   function TextInput(props, ref) {
-    input = props;
+    useLayoutEffect(() => {
+      input = props;
+    });
     useImperativeHandle(ref, () => nativeInput);
     return createElement("input", { value: props.value, readOnly: true });
   },

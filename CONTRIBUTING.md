@@ -11,7 +11,15 @@ Use Node.js 24 or newer supported by Vitest, then install dependencies and run t
 | pnpm            | `pnpm install`       | `pnpm run check` |
 | Bun             | `bun install`        | `bun run check`  |
 
-The checks run TypeScript, Prettier, and Vitest. Preview the published files with `npm pack --dry-run`.
+The checks run TypeScript, ESLint with zero warnings, Prettier, and Vitest. Run `npm run lint` for lint alone or `npm run lint:fix` for automatic fixes. Preview the published files with `npm pack --dry-run`.
+
+### Lint rules
+
+The ESLint configuration follows `truck-route-app`: explicit null checks, named conditions, named exports, consistent type imports, no `any`, no non-null assertions, no cyclic imports, and no test imports in production code. Source and example files also prohibit type assertions and CommonJS imports. Type-aware rules check Promise handling and exhaustive switches; React rules check hooks, dependencies, and ref usage.
+
+Tests use the same null-safety and Promise rules. Type assertions are allowed for native event fixtures. Mock modules remain separate from test suites. App-specific route, HTTP-client, and test-filename conventions are not applied to this package.
+
+ESLint 9 is used for compatibility with the Expo preset's React plugin. Lint dependencies are development-only and are not shipped in the npm package. `npm run check` and the prepublish hook both enforce lint.
 
 [example/composer.tsx](https://github.com/Truckroute-inc/react-native-message-input/blob/main/example/composer.tsx) is a component you can mount in an Expo development app, not a standalone example app. To test the packaged module, create a tarball with `npm pack`, install it in that app, and rebuild iOS.
 

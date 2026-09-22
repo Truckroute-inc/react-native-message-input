@@ -27,30 +27,38 @@ const native = requireNativeModule<SubmissionModule>("MessageInput");
 export function useNativeSubmission(
   options: NativeSubmissionOptions,
 ): NativeSubmission {
-  const { input, enabled, interceptReturn, onSubmit } = options;
+  const { input: inputRef, enabled, interceptReturn, onSubmit } = options;
   const token = useId();
   const callback = useRef(onSubmit);
-  callback.current = onSubmit;
+  useLayoutEffect(() => {
+    callback.current = onSubmit;
+  }, [onSubmit]);
   const tags = useRef(new Set<number>());
 
   const configure = useCallback(async () => {
-    const tag = findNodeHandle(input.current);
-    if (tag === null) return null;
+    const tag = findNodeHandle(inputRef.current);
+    if (tag === null) {
+      return null;
+    }
     tags.current.add(tag);
     const attached = await native.attach(tag, token, enabled, interceptReturn);
     return attached ? tag : null;
-  }, [input, token, enabled, interceptReturn]);
+  }, [inputRef, token, enabled, interceptReturn]);
 
   useLayoutEffect(() => {
     const subscription = native.addListener("onSubmit", (event) => {
       if (event.identifier === token) {
-        callback.current?.(event.text);
+        if (callback.current !== undefined) {
+          callback.current(event.text);
+        }
       }
     });
     const attachedTags = tags.current;
     return () => {
       subscription.remove();
-      for (const tag of attachedTags) void native.detach(tag, token);
+      for (const tag of attachedTags) {
+        void native.detach(tag, token);
+      }
       attachedTags.clear();
     };
   }, [token]);

@@ -1,3 +1,4 @@
+import { required } from "./required";
 import { beforeEach, expect, test, vi } from "vitest";
 import { input, nativeInput } from "./react-native-mock";
 import { act, createElement, createRef, useState } from "react";
@@ -25,10 +26,12 @@ async function mount(props: MessageInputProps = {}) {
   const root = createRoot(document.createElement("div"));
   const ref = createRef<MessageInputRef>();
   const render = async (next: MessageInputProps) => {
-    await act(() => root.render(createElement(MessageInput, { ...next, ref })));
+    await act(async () =>
+      root.render(createElement(MessageInput, { ...next, ref })),
+    );
   };
   await render(props);
-  return { ref, render, unmount: () => act(() => root.unmount()) };
+  return { ref, render, unmount: () => act(async () => root.unmount()) };
 }
 
 test("submission trims, clears, updates the draft, and then notifies", async () => {
@@ -44,11 +47,11 @@ test("submission trims, clears, updates the draft, and then notifies", async () 
   });
   const component = await mount({ onSubmit, onChangeText });
   try {
-    await act(() => input.onChangeText?.("  Hello  "));
+    await act(async () => required(input.onChangeText)("  Hello  "));
     order.length = 0;
-    await act(() => component.ref.current!.submit());
+    await act(async () => required(component.ref.current).submit());
     expect(order).toEqual(["clear", "change:", "submit:Hello"]);
-    await act(() => component.ref.current!.submit());
+    await act(async () => required(component.ref.current).submit());
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(input.value).toBeUndefined();
   } finally {
@@ -60,14 +63,14 @@ test("disabled submission and blur preserve the draft", async () => {
   const onSubmit = vi.fn();
   const component = await mount({ onSubmit, submissionEnabled: false });
   try {
-    await act(() => input.onChangeText?.("Draft"));
-    await act(() => component.ref.current!.submit());
-    component.ref.current!.blur();
+    await act(async () => required(input.onChangeText)("Draft"));
+    await act(async () => required(component.ref.current).submit());
+    required(component.ref.current).blur();
     expect(nativeInput.blur).toHaveBeenCalledOnce();
     expect(nativeInput.clear).not.toHaveBeenCalled();
     expect(onSubmit).not.toHaveBeenCalled();
     await component.render({ onSubmit, submissionEnabled: true });
-    await act(() => component.ref.current!.submit());
+    await act(async () => required(component.ref.current).submit());
     expect(onSubmit).toHaveBeenCalledWith("Draft");
   } finally {
     await component.unmount();
@@ -90,13 +93,13 @@ test("controlled value follows parent changes and is cleared through onChangeTex
     });
   }
   try {
-    await act(() => root.render(createElement(Controlled)));
-    await act(() => updateValue("Updated externally"));
-    await act(() => ref.current!.submit());
+    await act(async () => root.render(createElement(Controlled)));
+    await act(async () => updateValue("Updated externally"));
+    await act(async () => required(ref.current).submit());
     expect(onSubmit).toHaveBeenCalledWith("Updated externally");
     expect(input.value).toBe("");
   } finally {
-    await act(() => root.unmount());
+    await act(async () => root.unmount());
   }
 });
 
@@ -104,11 +107,11 @@ test("defaultValue initializes the draft and does not overwrite subsequent input
   const onSubmit = vi.fn();
   const component = await mount({ defaultValue: "Initial draft", onSubmit });
   try {
-    await act(() => component.ref.current!.submit());
+    await act(async () => required(component.ref.current).submit());
     expect(onSubmit).toHaveBeenLastCalledWith("Initial draft");
-    await act(() => input.onChangeText?.("Next draft"));
+    await act(async () => required(input.onChangeText)("Next draft"));
     await component.render({ defaultValue: "Changed default", onSubmit });
-    await act(() => component.ref.current!.submit());
+    await act(async () => required(component.ref.current).submit());
     expect(onSubmit).toHaveBeenLastCalledWith("Next draft");
   } finally {
     await component.unmount();
@@ -120,9 +123,9 @@ test("keyboard submission uses event text and preserves onSubmitEditing", async 
   const onSubmitEditing = vi.fn();
   const component = await mount({ onSubmit, onSubmitEditing });
   try {
-    await act(() => input.onChangeText?.("Stale JS draft"));
+    await act(async () => required(input.onChangeText)("Stale JS draft"));
     const event = submitEvent("  Corrected text  ");
-    await act(() => input.onSubmitEditing?.(event));
+    await act(async () => required(input.onSubmitEditing)(event));
     expect(onSubmit).toHaveBeenCalledWith("Corrected text");
     expect(onSubmitEditing).toHaveBeenCalledWith(event);
   } finally {
@@ -135,7 +138,7 @@ test("without onSubmit it preserves standard TextInput behavior", async () => {
   const component = await mount({ onSubmitEditing });
   try {
     const event = submitEvent("Normal input");
-    await act(() => input.onSubmitEditing?.(event));
+    await act(async () => required(input.onSubmitEditing)(event));
     expect(onSubmitEditing).toHaveBeenCalledWith(event);
     expect(nativeInput.clear).not.toHaveBeenCalled();
     expect(input.returnKeyType).toBeUndefined();
@@ -204,7 +207,7 @@ test("standard props, text styles, and event handlers reach TextInput", async ()
     const focusEvent = { nativeEvent: { target: 42 } } as Parameters<
       NonNullable<TextInputProps["onFocus"]>
     >[0];
-    input.onFocus?.(focusEvent);
+    required(input.onFocus)(focusEvent);
     expect(onFocus).toHaveBeenCalledWith(focusEvent);
   } finally {
     await component.unmount();
@@ -214,12 +217,12 @@ test("standard props, text styles, and event handlers reach TextInput", async ()
 test("ref preserves native focus, blur, measurement and selection methods", async () => {
   const component = await mount();
   try {
-    expect(component.ref.current!.focus()).toBeUndefined();
-    expect(component.ref.current!.blur()).toBeUndefined();
-    expect(component.ref.current!.isFocused()).toBe(true);
+    expect(required(component.ref.current).focus()).toBeUndefined();
+    expect(required(component.ref.current).blur()).toBeUndefined();
+    expect(required(component.ref.current).isFocused()).toBe(true);
     const callback = vi.fn();
-    component.ref.current!.measure(callback);
-    component.ref.current!.setSelection(1, 2);
+    required(component.ref.current).measure(callback);
+    required(component.ref.current).setSelection(1, 2);
     expect(nativeInput.focus).toHaveBeenCalledOnce();
     expect(nativeInput.blur).toHaveBeenCalledOnce();
     expect(nativeInput.measure).toHaveBeenCalledWith(callback);
@@ -240,8 +243,9 @@ test.each([
   const component = await mount({ ...props, onSubmit: vi.fn() });
   try {
     expect(input.submitBehavior).toBe(expected);
-    if ("blurOnSubmit" in props)
+    if ("blurOnSubmit" in props) {
       expect(input.blurOnSubmit).toBe(props.blurOnSubmit);
+    }
     expect(input.returnKeyType).toBe("multiline" in props ? undefined : "send");
   } finally {
     await component.unmount();

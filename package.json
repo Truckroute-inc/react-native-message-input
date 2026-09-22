@@ -22,8 +22,10 @@
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "check": "tsc --noEmit && prettier --check . && vitest run",
-    "prepublishOnly": "npm run check"
+    "check": "tsc --noEmit && eslint . --max-warnings=0 && prettier --check . && vitest run",
+    "prepublishOnly": "npm run check",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix --max-warnings=0"
   },
   "peerDependencies": {
     "expo": ">=52",
@@ -33,6 +35,8 @@
   "devDependencies": {
     "@types/react": "~19.2.18",
     "@types/react-dom": "~19.2.7",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.0",
     "expo": "~57.0.24",
     "happy-dom": "^20.14.5",
     "prettier": "^3.9.8",

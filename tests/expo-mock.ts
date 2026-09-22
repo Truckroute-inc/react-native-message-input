@@ -22,5 +22,7 @@ export const nativeModule = {
 };
 export const requireNativeModule = () => nativeModule;
 export function emitSubmission(event: SubmitEvent) {
-  for (const listener of listeners) listener(event);
+  for (const listener of listeners) {
+    listener(event);
+  }
 }
