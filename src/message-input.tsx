@@ -31,6 +31,9 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
     useImperativeHandle(ref, () => ({
       clear: async () => clear(),
       submit: async () => submit(text),
+      blur: async () => {
+        if (input.current !== null) input.current.blur();
+      },
       focus: async () => {
         if (input.current !== null) input.current.focus();
       },

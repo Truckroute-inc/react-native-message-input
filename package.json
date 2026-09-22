@@ -1,6 +1,6 @@
 {
   "name": "@truckroute/message-input",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "React Native message input that commits iOS keyboard autocorrection before submission and clears the field in one native operation.",
   "main": "src/index.ts",
   "types": "src/index.ts",

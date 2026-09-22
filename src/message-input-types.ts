@@ -5,6 +5,7 @@ export type MessageInputRef = {
   submit: () => Promise<void>;
   clear: () => Promise<void>;
   focus: () => Promise<void>;
+  blur: () => Promise<void>;
 };
 
 export type MessageInputProps = {

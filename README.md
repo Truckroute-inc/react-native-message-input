@@ -114,7 +114,7 @@ Only `onSubmit` is required. The package exports `MessageInputProps` and `Messag
 | Prop                 | Type                     | Description                                                              |
 | -------------------- | ------------------------ | ------------------------------------------------------------------------ |
 | `onSubmit`           | `(text: string) => void` | Receives trimmed, nonempty text after the field is cleared.              |
-| `ref`                | `Ref<MessageInputRef>`   | Access to `submit()`, `clear()`, and `focus()`.                          |
+| `ref`                | `Ref<MessageInputRef>`   | Access to `submit()`, `clear()`, `focus()`, and `blur()`.                |
 | `submissionEnabled`  | `boolean`                | Enables submission. Defaults to `true`; does not disable editing.        |
 | `placeholder`        | `string`                 | Text displayed when the field is empty.                                  |
 | `maxLength`          | `number`                 | Input length limit. On iOS, measured in UTF-16 code units.               |
@@ -137,9 +137,11 @@ All methods return `Promise<void>`.
 | `submit()` | Submits the current text using the same path as the keyboard Send key. Respects `submissionEnabled`. |
 | `clear()`  | Clears the field without calling `onSubmit`.                                                         |
 | `focus()`  | Focuses the field.                                                                                   |
+| `blur()`   | Removes focus and dismisses the keyboard without clearing text or calling `onSubmit`.                |
 
 ```tsx
 await input.current?.focus();
+await input.current?.blur();
 await input.current?.clear();
 await input.current?.submit();
 ```

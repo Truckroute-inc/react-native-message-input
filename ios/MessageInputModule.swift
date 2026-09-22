@@ -30,6 +30,9 @@ public class MessageInputModule: Module {
       AsyncFunction("submit") { (view: MessageInputView) in view.submit() }
       AsyncFunction("clear") { (view: MessageInputView) in view.clear() }
       AsyncFunction("focus") { (view: MessageInputView) in view.field.becomeFirstResponder() }
+      AsyncFunction("blur") { (view: MessageInputView) in
+        _ = view.field.resignFirstResponder()
+      }
       OnViewDidUpdateProps { (view: MessageInputView) in
         view.field.attributedPlaceholder = NSAttributedString(
           string: view.field.placeholder ?? "",

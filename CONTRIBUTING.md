@@ -19,7 +19,7 @@ Automated checks cover TypeScript, formatting, and fallback submission behavior.
 
 - Pending autocorrection with both the external Send button and keyboard Send key: one corrected message, an empty field, and the keyboard still open.
 - A cursor in the middle of text, emoji, pasted text, English/Russian keyboards, and marked-text input such as Japanese.
-- Empty and disabled submissions, `clear()`, `focus()`, maximum length, and a new draft surviving completion or failure of a previous send.
+- Empty and disabled submissions, `clear()`, `focus()`, `blur()` preserving the draft, maximum length, and a new draft surviving completion or failure of a previous send.
 - Placeholder, accessibility, light/dark appearance, and Android/web fallback behavior.
 
 ### Publishing
