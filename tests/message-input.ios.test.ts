@@ -95,3 +95,48 @@ test("iOS reports an unavailable native input instead of submitting stale JS tex
     nativeModule.attach.mockResolvedValue(true);
   }
 });
+
+test("iOS keeps its attachment while text and callbacks change", async () => {
+  const root = createRoot(document.createElement("div"));
+  const first = vi.fn();
+  const latest = vi.fn();
+  try {
+    await act(() =>
+      root.render(
+        createElement(MessageInput, { value: "draft", onSubmit: first }),
+      ),
+    );
+    const identifier = nativeModule.attach.mock.calls.at(-1)![1];
+    const attachments = nativeModule.attach.mock.calls.length;
+    await act(() =>
+      root.render(
+        createElement(MessageInput, { value: "edited", onSubmit: latest }),
+      ),
+    );
+    expect(nativeModule.attach).toHaveBeenCalledTimes(attachments);
+    emitSubmission({ identifier, text: "edited" });
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledExactlyOnceWith("edited");
+
+    // Native layout still retries attachment when the host view becomes available.
+    await act(() =>
+      input.onLayout?.({} as Parameters<NonNullable<typeof input.onLayout>>[0]),
+    );
+    expect(nativeModule.attach).toHaveBeenCalledTimes(attachments + 1);
+
+    // Switching to UITextView can replace the native input without changing send behavior.
+    await act(() =>
+      root.render(
+        createElement(MessageInput, {
+          onSubmit: latest,
+          value: "edited",
+          multiline: true,
+          submitBehavior: "submit",
+        }),
+      ),
+    );
+    expect(nativeModule.attach).toHaveBeenCalledTimes(attachments + 2);
+  } finally {
+    await act(() => root.unmount());
+  }
+});

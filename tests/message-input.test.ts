@@ -198,6 +198,7 @@ test("standard props, text styles, and event handlers reach TextInput", async ()
       onSelectionChange,
       onContentSizeChange,
       onBlur,
+      onFocus,
     });
     expect(input.style).toBe(style);
     const focusEvent = { nativeEvent: { target: 42 } } as Parameters<

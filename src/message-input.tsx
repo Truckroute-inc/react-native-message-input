@@ -25,6 +25,7 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
       (!submitBehavior && props.blurOnSubmit === true);
     const native = useNativeSubmission({
       input,
+      multiline: props.multiline,
       enabled: submissionEnabled && !!onSubmit,
       interceptReturn: !!onSubmit && submitsOnReturn,
       onSubmit,
@@ -83,10 +84,6 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
         onLayout={(event) => {
           native?.attach();
           props.onLayout?.(event);
-        }}
-        onFocus={(event) => {
-          native?.attach();
-          props.onFocus?.(event);
         }}
       />
     );

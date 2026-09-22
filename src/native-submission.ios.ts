@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useId, useLayoutEffect, useRef } from "react";
 import { findNodeHandle } from "react-native";
 import { requireNativeModule } from "expo";
 import type {
@@ -23,41 +23,32 @@ type SubmissionModule = {
 };
 
 const native = requireNativeModule<SubmissionModule>("MessageInput");
-const session = Date.now().toString(36);
-let nextIdentifier = 0;
 
 export function useNativeSubmission(
   options: NativeSubmissionOptions,
 ): NativeSubmission {
-  const current = useRef(options);
-  current.current = options;
-  const identifier = useRef<string | null>(null);
-  if (identifier.current === null) {
-    identifier.current = `${session}:${++nextIdentifier}`;
-  }
-  const token = identifier.current;
+  const { input, enabled, interceptReturn, onSubmit } = options;
+  const token = useId();
+  const callback = useRef(onSubmit);
+  callback.current = onSubmit;
   const tags = useRef(new Set<number>());
-  const active = useRef(false);
 
-  const configure = async () => {
-    const { input, enabled, interceptReturn } = current.current;
+  const configure = useCallback(async () => {
     const tag = findNodeHandle(input.current);
-    if (tag === null || !active.current) return null;
+    if (tag === null) return null;
     tags.current.add(tag);
     const attached = await native.attach(tag, token, enabled, interceptReturn);
     return attached ? tag : null;
-  };
+  }, [input, token, enabled, interceptReturn]);
 
   useLayoutEffect(() => {
-    active.current = true;
     const subscription = native.addListener("onSubmit", (event) => {
-      if (active.current && event.identifier === token) {
-        current.current.onSubmit?.(event.text);
+      if (event.identifier === token) {
+        callback.current?.(event.text);
       }
     });
     const attachedTags = tags.current;
     return () => {
-      active.current = false;
       subscription.remove();
       for (const tag of attachedTags) void native.detach(tag, token);
       attachedTags.clear();
@@ -67,7 +58,7 @@ export function useNativeSubmission(
   // A layout event retries attachment if React hasn't mounted the native view yet.
   useLayoutEffect(() => {
     void configure();
-  });
+  }, [configure, options.multiline]);
 
   return {
     attach: () => void configure(),
