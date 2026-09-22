@@ -1,26 +1,9 @@
-import { expect, mock, test } from "bun:test";
-import { Window } from "happy-dom";
+import { expect, test, vi } from "vitest";
+import { input, nativeInput } from "./react-native-mock";
 import { act, createElement, createRef } from "react";
-import type { ReactNode } from "react";
-import type { TextInputProps } from "react-native";
 import type { MessageInputRef } from "../src/message-input-types";
 
-const window = new Window();
-Object.assign(globalThis, {
-  window,
-  document: window.document,
-  navigator: window.navigator,
-  IS_REACT_ACT_ENVIRONMENT: true,
-});
-let input: TextInputProps = {};
-mock.module("react-native", () => ({
-  View: ({ children }: { children: ReactNode }) =>
-    createElement("div", null, children),
-  TextInput: (props: TextInputProps) => {
-    input = props;
-    return createElement("input", { value: props.value, readOnly: true });
-  },
-}));
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const { createRoot } = await import("react-dom/client");
 const { MessageInput } = await import("../src/message-input");
 
@@ -28,7 +11,7 @@ test("fallback submission trims and clears before notifying; disabled submission
   const host = document.createElement("div");
   const root = createRoot(host);
   const ref = createRef<MessageInputRef>();
-  const send = mock();
+  const send = vi.fn();
   const render = (submissionEnabled: boolean) =>
     root.render(
       createElement(MessageInput, {
@@ -38,6 +21,10 @@ test("fallback submission trims and clears before notifying; disabled submission
       }),
     );
   await act(() => render(true));
+  await act(async () => {
+    await ref.current?.focus();
+  });
+  expect(nativeInput.focus).toHaveBeenCalledOnce();
   await act(async () => {
     if (ref.current !== null) await ref.current.submit();
   });
@@ -56,6 +43,7 @@ test("fallback submission trims and clears before notifying; disabled submission
     if (ref.current !== null) await ref.current.submit();
   });
   expect(send).toHaveBeenLastCalledWith("Hello");
+  expect(nativeInput.clear).toHaveBeenCalledOnce();
   expect(input.value).toBe("");
   await act(() => {
     if (input.onChangeText !== undefined) input.onChangeText("Next message");

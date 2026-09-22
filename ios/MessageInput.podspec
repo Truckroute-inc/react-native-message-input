@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.license = package['license']
   s.author = 'Truckroute inc'
   s.homepage = 'https://github.com/Truckroute-inc/react-native-message-input'
-  s.source = { :git => package['repository']['url'], :tag => s.version.to_s }
+  s.source = { :git => package['repository']['url'].sub(/^git\+/, ''), :tag => "v#{s.version}" }
   s.platforms = { :ios => '16.4' }
   s.static_framework = true
   s.dependency 'ExpoModulesCore'

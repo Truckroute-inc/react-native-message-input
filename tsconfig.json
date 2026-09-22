@@ -9,7 +9,7 @@
     "noUnusedParameters": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["bun-types", "react"]
+    "types": ["react"]
   },
   "include": ["src", "tests", "example"]
 }
