@@ -10,6 +10,8 @@ export function Composer({ onSubmit }: { onSubmit: (text: string) => void }) {
       <MessageInput
         ref={input}
         onSubmit={onSubmit}
+        returnKeyType="send"
+        submitBehavior="submit"
         placeholder="Message"
         maxLength={4000}
         style={{

@@ -31,7 +31,7 @@ export const TextInput = forwardRef<typeof nativeInput, TextInputProps>(
     useLayoutEffect(() => {
       input = props;
     });
-    useImperativeHandle(ref, () => nativeInput);
+    useImperativeHandle(ref, () => ({ ...nativeInput }), []);
     return createElement("input", { value: props.value, readOnly: true });
   },
 );

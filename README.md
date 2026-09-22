@@ -69,6 +69,8 @@ export function Composer({ send }: { send: (text: string) => void }) {
         accessibilityLabel="Message"
         maxLength={4000}
         onSubmit={send}
+        returnKeyType="send"
+        submitBehavior="submit"
         style={styles.input}
       />
       <Button title="Send" onPress={() => void input.current?.submit()} />
@@ -143,20 +145,15 @@ With `multiline`, Return inserts a newline by default. Use your send button to c
 
 `style` applies directly to the `TextInput`, including typography, padding, borders, and sizing.
 
-The package adds two props:
+The package adds `onSubmit?: (text: string) => void`. It receives trimmed, nonempty text after the field has been cleared. Omit it to use the component as a regular input.
 
-| Prop                | Type                     | Description                                                                                           |
-| ------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `onSubmit`          | `(text: string) => void` | Receives trimmed, nonempty text after the input is cleared. Enables message submission when provided. |
-| `submissionEnabled` | `boolean`                | Enables message submission. Defaults to `true`. Does not disable editing or standard input events.    |
-
-Without `onSubmit`, the component behaves as a regular `TextInput`. With `onSubmit`, single-line inputs default to `returnKeyType="send"` and keep focus on submission. Explicit `returnKeyType`, `submitBehavior`, and `blurOnSubmit` values are respected. `onSubmitEditing` remains available for the standard keyboard event; calling `submit()` does not synthesize that event.
+Keyboard behavior comes from `TextInput`. Set `returnKeyType="send"` for a Send label and `submitBehavior="submit"` to send without dismissing the keyboard. `onSubmitEditing` remains the standard keyboard event; calling `submit()` does not synthesize it.
 
 ### Ref methods
 
 `MessageInputRef` includes the native `TextInput` ref methods supported by your React Native version, including `focus()`, `blur()`, `clear()`, `isFocused()`, and measurement methods. Their signatures and return values match `TextInput`.
 
-The additional `submit(): Promise<void>` method submits the current message and respects `submissionEnabled`. The promise represents the native submission operation, not network delivery.
+The additional `submit(): Promise<void>` method submits the current message when `onSubmit` is provided. The promise represents the native submission operation, not network delivery.
 
 ```tsx
 input.current?.focus();
@@ -170,7 +167,6 @@ await input.current?.submit();
 
 - Leading and trailing whitespace is removed. Empty or whitespace-only messages are ignored.
 - The field is cleared before `onSubmit` is called. `onChangeText` receives the empty string so controlled state can be updated.
-- `submissionEnabled={false}` preserves the draft and suppresses `onSubmit`; standard keyboard events and explicit blur behavior still apply.
 - Sending, errors, and retries belong to your app. Retain the submitted text if you need to retry a failed request.
 - As with a regular controlled input, the parent owns `value`. If it keeps supplying the old value, React Native can restore that text.
 
@@ -178,7 +174,7 @@ await input.current?.submit();
 
 All platforms render React Native's `TextInput`.
 
-On iOS, the module attaches to the underlying `UITextField` or `UITextView`. It commits pending autocorrection, reads the text, and clears it on the UI thread. It also updates React Native's text state and event count, preserving normal input events and controlled-value synchronization.
+On iOS, `submit()` finds the underlying `UITextField` or `UITextView`, commits pending autocorrection, reads the text, and clears it in one UI-thread operation. It also updates React Native's text state and event count, preserving normal input events and controlled-value synchronization.
 
 Android and web submit through React Native input events and the latest text tracked by the component. The iOS autocorrection operation is specific to iOS.
 

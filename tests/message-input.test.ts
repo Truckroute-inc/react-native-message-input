@@ -59,9 +59,9 @@ test("submission trims, clears, updates the draft, and then notifies", async () 
   }
 });
 
-test("disabled submission and blur preserve the draft", async () => {
+test("removing onSubmit and calling blur preserve the draft", async () => {
   const onSubmit = vi.fn();
-  const component = await mount({ onSubmit, submissionEnabled: false });
+  const component = await mount();
   try {
     await act(async () => required(input.onChangeText)("Draft"));
     await act(async () => required(component.ref.current).submit());
@@ -69,7 +69,7 @@ test("disabled submission and blur preserve the draft", async () => {
     expect(nativeInput.blur).toHaveBeenCalledOnce();
     expect(nativeInput.clear).not.toHaveBeenCalled();
     expect(onSubmit).not.toHaveBeenCalled();
-    await component.render({ onSubmit, submissionEnabled: true });
+    await component.render({ onSubmit });
     await act(async () => required(component.ref.current).submit());
     expect(onSubmit).toHaveBeenCalledWith("Draft");
   } finally {
@@ -233,7 +233,7 @@ test("ref preserves native focus, blur, measurement and selection methods", asyn
 });
 
 test.each([
-  [{}, "submit"],
+  [{}, undefined],
   [{ multiline: true }, undefined],
   [{ multiline: true, submitBehavior: "submit" }, "submit"],
   [{ submitBehavior: "blurAndSubmit" }, "blurAndSubmit"],
@@ -246,7 +246,26 @@ test.each([
     if ("blurOnSubmit" in props) {
       expect(input.blurOnSubmit).toBe(props.blurOnSubmit);
     }
-    expect(input.returnKeyType).toBe("multiline" in props ? undefined : "send");
+    expect(input.returnKeyType).toBeUndefined();
+  } finally {
+    await component.unmount();
+  }
+});
+
+test("clear resets the draft without replacing the native ref methods", async () => {
+  const onSubmit = vi.fn();
+  const component = await mount({ defaultValue: "Draft", onSubmit });
+  try {
+    const ref = required(component.ref.current);
+    expect(ref.focus).toBe(nativeInput.focus);
+    ref.clear();
+    await act(async () => ref.submit());
+    expect(nativeInput.clear).toHaveBeenCalledOnce();
+    expect(onSubmit).not.toHaveBeenCalled();
+    await component.render({ onSubmit });
+    await act(async () => required(input.onChangeText)("Next draft"));
+    await act(async () => required(component.ref.current).submit());
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith("Next draft");
   } finally {
     await component.unmount();
   }

@@ -1,146 +1,109 @@
-import { required } from "./required";
 import { beforeEach, expect, test, vi } from "vitest";
 import { act, createElement, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import { input, nativeInput } from "./react-native-mock";
-import { emitSubmission, nativeModule } from "./expo-mock";
+import { nativeModule } from "./expo-mock";
+import { required } from "./required";
+import type { TextInputProps } from "react-native";
 import type { MessageInputRef } from "../src/message-input-types";
 
-vi.mock(
-  "../src/native-submission",
-  () => import("../src/native-submission.ios"),
-);
-const { MessageInput } = await import("../src/message-input");
+const { MessageInput } = await import("../src/message-input.ios");
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+
 beforeEach(() => {
   vi.clearAllMocks();
+  nativeModule.submit.mockResolvedValue("Corrected native text");
 });
 
-test("iOS routes submission to native and filters native events by input instance", async () => {
+test("iOS submits the native result instead of the JS draft", async () => {
   const root = createRoot(document.createElement("div"));
   const ref = createRef<MessageInputRef>();
   const onSubmit = vi.fn();
   try {
     await act(async () =>
-      root.render(createElement(MessageInput, { ref, onSubmit })),
+      root.render(
+        createElement(MessageInput, { ref, onSubmit, value: "Stale JS draft" }),
+      ),
     );
-    const identifier = required(nativeModule.attach.mock.calls.at(-1))[1];
-    expect(nativeModule.attach).toHaveBeenLastCalledWith(
-      42,
-      identifier,
-      true,
-      true,
-    );
-    await act(async () => required(input.onChangeText)("Stale JS text"));
+
     await act(async () => required(ref.current).submit());
-    expect(nativeModule.submit).toHaveBeenCalledWith(42, identifier);
+    expect(nativeModule.submit).toHaveBeenCalledExactlyOnceWith(42);
     expect(nativeInput.clear).not.toHaveBeenCalled();
-    expect(onSubmit).not.toHaveBeenCalled();
-    emitSubmission({ identifier: "another-input", text: "Ignore" });
-    expect(onSubmit).not.toHaveBeenCalled();
-    emitSubmission({ identifier, text: "Corrected native text" });
+    expect(required(ref.current).clear).toBe(nativeInput.clear);
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith("Corrected native text");
   } finally {
     await act(async () => root.unmount());
   }
-  expect(nativeModule.detach).toHaveBeenCalled();
-  emitSubmission({
-    identifier: required(nativeModule.attach.mock.calls.at(-1))[1],
-    text: "Unmounted",
-  });
-  expect(onSubmit).toHaveBeenCalledTimes(1);
 });
 
-test("iOS preserves multiline newlines and updates disabled submission", async () => {
+test("iOS ignores empty submissions and does no native work without onSubmit", async () => {
   const root = createRoot(document.createElement("div"));
+  const ref = createRef<MessageInputRef>();
   const onSubmit = vi.fn();
   try {
     await act(async () =>
-      root.render(createElement(MessageInput, { onSubmit, multiline: true })),
+      root.render(
+        createElement(MessageInput, { ref, value: "Stale JS draft" }),
+      ),
     );
-    expect(required(nativeModule.attach.mock.calls.at(-1)).slice(2)).toEqual([
-      true,
-      false,
-    ]);
+    await act(async () => required(ref.current).submit());
+    expect(nativeModule.submit).not.toHaveBeenCalled();
+    await act(async () =>
+      root.render(
+        createElement(MessageInput, { ref, onSubmit, value: "Stale JS draft" }),
+      ),
+    );
+    nativeModule.submit.mockResolvedValue(null);
+    await act(async () => required(ref.current).submit());
+    expect(onSubmit).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test("iOS forwards submission errors to the caller", async () => {
+  const root = createRoot(document.createElement("div"));
+  const ref = createRef<MessageInputRef>();
+  try {
+    await act(async () =>
+      root.render(createElement(MessageInput, { ref, onSubmit: vi.fn() })),
+    );
+    nativeModule.submit.mockRejectedValue(new Error("Native failure"));
+    await expect(required(ref.current).submit()).rejects.toThrow(
+      "Native failure",
+    );
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+test("iOS keyboard submission preserves the standard event and uses native text", async () => {
+  const root = createRoot(document.createElement("div"));
+  const onSubmit = vi.fn();
+  const onSubmitEditing = vi.fn();
+  const onChangeText = vi.fn();
+  try {
     await act(async () =>
       root.render(
         createElement(MessageInput, {
           onSubmit,
-          multiline: true,
-          submitBehavior: "submit",
-          submissionEnabled: false,
-        }),
-      ),
-    );
-    expect(required(nativeModule.attach.mock.calls.at(-1)).slice(2)).toEqual([
-      false,
-      true,
-    ]);
-  } finally {
-    await act(async () => root.unmount());
-  }
-});
-
-test("iOS reports an unavailable native input instead of submitting stale JS text", async () => {
-  const root = createRoot(document.createElement("div"));
-  const ref = createRef<MessageInputRef>();
-  try {
-    nativeModule.attach.mockResolvedValue(false);
-    await act(async () =>
-      root.render(createElement(MessageInput, { ref, onSubmit: vi.fn() })),
-    );
-    await expect(required(ref.current).submit()).rejects.toThrow(
-      "must be mounted",
-    );
-    expect(nativeModule.submit).not.toHaveBeenCalled();
-  } finally {
-    await act(async () => root.unmount());
-    nativeModule.attach.mockResolvedValue(true);
-  }
-});
-
-test("iOS keeps its attachment while text and callbacks change", async () => {
-  const root = createRoot(document.createElement("div"));
-  const first = vi.fn();
-  const latest = vi.fn();
-  try {
-    await act(async () =>
-      root.render(
-        createElement(MessageInput, { value: "draft", onSubmit: first }),
-      ),
-    );
-    const identifier = required(nativeModule.attach.mock.calls.at(-1))[1];
-    const attachments = nativeModule.attach.mock.calls.length;
-    await act(async () =>
-      root.render(
-        createElement(MessageInput, { value: "edited", onSubmit: latest }),
-      ),
-    );
-    expect(nativeModule.attach).toHaveBeenCalledTimes(attachments);
-    emitSubmission({ identifier, text: "edited" });
-    expect(first).not.toHaveBeenCalled();
-    expect(latest).toHaveBeenCalledExactlyOnceWith("edited");
-
-    // Native layout still retries attachment when the host view becomes available.
-    await act(async () =>
-      required(input.onLayout)(
-        {} as Parameters<NonNullable<typeof input.onLayout>>[0],
-      ),
-    );
-    expect(nativeModule.attach).toHaveBeenCalledTimes(attachments + 1);
-
-    // Switching to UITextView can replace the native input without changing send behavior.
-    await act(async () =>
-      root.render(
-        createElement(MessageInput, {
-          onSubmit: latest,
-          value: "edited",
-          multiline: true,
+          onSubmitEditing,
+          onChangeText,
           submitBehavior: "submit",
         }),
       ),
     );
-    expect(nativeModule.attach).toHaveBeenCalledTimes(attachments + 2);
+    expect(input.onChangeText).toBe(onChangeText);
+    const event = {
+      nativeEvent: { text: "Keyboard event", target: 42, eventCount: 1 },
+    } as unknown as Parameters<
+      NonNullable<TextInputProps["onSubmitEditing"]>
+    >[0];
+    await act(async () => required(input.onSubmitEditing)(event));
+    expect(onSubmitEditing).toHaveBeenCalledExactlyOnceWith(event);
+    expect(nativeModule.submit).toHaveBeenCalledExactlyOnceWith(42);
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith("Corrected native text");
+    expect(onChangeText).not.toHaveBeenCalled();
   } finally {
     await act(async () => root.unmount());
   }
