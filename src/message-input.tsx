@@ -4,53 +4,29 @@ import type { MessageInputProps, MessageInputRef } from "./message-input-types";
 import { useNativeSubmission } from "./native-submission";
 
 export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
-  function MessageInput(
-    {
-      onSubmit,
-      submissionEnabled = true,
-      onChangeText,
-      onSubmitEditing,
-      onLayout,
-      onFocus,
-      value,
-      defaultValue,
-      multiline,
-      submitBehavior,
-      blurOnSubmit,
-      returnKeyType,
-      style,
-      textColor,
-      placeholderColor,
-      placeholderTextColor,
-      fontName,
-      fontSize,
-      ...props
-    },
-    ref,
-  ) {
+  function MessageInput({ onSubmit, submissionEnabled = true, ...props }, ref) {
     const input = useRef<TextInput>(null);
-    const text = useRef(value ?? defaultValue ?? "");
-    if (value !== undefined) text.current = value;
+    const text = useRef(props.value ?? props.defaultValue ?? "");
+    if (props.value !== undefined) text.current = props.value;
 
-    // Respect explicit TextInput behavior; keep the keyboard open for messages.
-    const behavior =
-      submitBehavior ??
-      (blurOnSubmit !== undefined
-        ? blurOnSubmit
-          ? "blurAndSubmit"
-          : multiline
-            ? "newline"
-            : "submit"
-        : onSubmit && !multiline
-          ? "submit"
-          : undefined);
-    const submitsOnReturn = behavior
-      ? behavior !== "newline" || !multiline
-      : !multiline;
+    let submitBehavior = props.submitBehavior;
+    if (
+      !submitBehavior &&
+      props.blurOnSubmit === undefined &&
+      onSubmit &&
+      !props.multiline
+    ) {
+      submitBehavior = "submit";
+    }
+    const submitsOnReturn =
+      !props.multiline ||
+      submitBehavior === "submit" ||
+      submitBehavior === "blurAndSubmit" ||
+      (!submitBehavior && props.blurOnSubmit === true);
     const native = useNativeSubmission({
       input,
-      enabled: submissionEnabled && onSubmit !== undefined,
-      interceptReturn: onSubmit !== undefined && submitsOnReturn,
+      enabled: submissionEnabled && !!onSubmit,
+      interceptReturn: !!onSubmit && submitsOnReturn,
       onSubmit,
     });
 
@@ -58,63 +34,59 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
       text.current = "";
       input.current?.clear();
     };
-    const submit = (draft: string) => {
+    const submitText = (draft: string) => {
       const message = draft.trim();
-      if (!submissionEnabled || !onSubmit || message.length === 0) return;
+      if (!submissionEnabled || !onSubmit || !message) return;
       clear();
-      onChangeText?.("");
+      props.onChangeText?.("");
       onSubmit(message);
     };
+    const submit = async () => {
+      if (!submissionEnabled || !onSubmit) return;
+      if (native) await native.submit();
+      else submitText(text.current);
+    };
 
-    useImperativeHandle(ref, () => {
-      // Preserve the host ref, including measurement and future TextInput methods.
-      return new Proxy({} as MessageInputRef, {
-        get(_target, property) {
-          if (property === "submit") {
-            return async () => {
-              if (!submissionEnabled || !onSubmit) return;
-              if (native) await native.submit();
-              else submit(text.current);
-            };
-          }
-          if (property === "clear") return clear;
-          const host = input.current;
-          if (!host) return undefined;
-          const member = Reflect.get(host, property, host);
-          return typeof member === "function" ? member.bind(host) : member;
-        },
-      });
-    });
+    // Forward the complete host ref without copying or mutating native methods.
+    useImperativeHandle(
+      ref,
+      () =>
+        new Proxy({} as MessageInputRef, {
+          get(_target, property) {
+            if (property === "submit") return submit;
+            if (property === "clear") return clear;
+            const host = input.current;
+            if (!host) return undefined;
+            const member = Reflect.get(host, property, host);
+            return typeof member === "function" ? member.bind(host) : member;
+          },
+        }),
+    );
 
     return (
       <TextInput
         {...props}
         ref={input}
-        value={value}
-        defaultValue={defaultValue}
-        multiline={multiline}
-        submitBehavior={behavior}
-        blurOnSubmit={blurOnSubmit}
+        submitBehavior={submitBehavior}
         returnKeyType={
-          returnKeyType ?? (onSubmit && !multiline ? "send" : undefined)
+          props.returnKeyType ??
+          (onSubmit && !props.multiline ? "send" : undefined)
         }
-        placeholderTextColor={placeholderTextColor ?? placeholderColor}
-        style={[{ color: textColor, fontFamily: fontName, fontSize }, style]}
         onChangeText={(nextText) => {
           text.current = nextText;
-          onChangeText?.(nextText);
+          props.onChangeText?.(nextText);
         }}
         onSubmitEditing={(event) => {
-          if (!native) submit(event.nativeEvent.text);
-          onSubmitEditing?.(event);
+          if (!native) submitText(event.nativeEvent.text);
+          props.onSubmitEditing?.(event);
         }}
         onLayout={(event) => {
           native?.attach();
-          onLayout?.(event);
+          props.onLayout?.(event);
         }}
         onFocus={(event) => {
           native?.attach();
-          onFocus?.(event);
+          props.onFocus?.(event);
         }}
       />
     );

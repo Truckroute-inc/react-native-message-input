@@ -199,7 +199,7 @@ test("standard props, text styles, and event handlers reach TextInput", async ()
       onContentSizeChange,
       onBlur,
     });
-    expect(input.style).toContain(style);
+    expect(input.style).toBe(style);
     const focusEvent = { nativeEvent: { target: 42 } } as Parameters<
       NonNullable<TextInputProps["onFocus"]>
     >[0];
@@ -233,12 +233,14 @@ test.each([
   [{ multiline: true }, undefined],
   [{ multiline: true, submitBehavior: "submit" }, "submit"],
   [{ submitBehavior: "blurAndSubmit" }, "blurAndSubmit"],
-  [{ blurOnSubmit: true }, "blurAndSubmit"],
-  [{ multiline: true, blurOnSubmit: false }, "newline"],
+  [{ blurOnSubmit: true }, undefined],
+  [{ multiline: true, blurOnSubmit: false }, undefined],
 ] as const)("respects return key behavior: %j", async (props, expected) => {
   const component = await mount({ ...props, onSubmit: vi.fn() });
   try {
     expect(input.submitBehavior).toBe(expected);
+    if ("blurOnSubmit" in props)
+      expect(input.blurOnSubmit).toBe(props.blurOnSubmit);
     expect(input.returnKeyType).toBe("multiline" in props ? undefined : "send");
   } finally {
     await component.unmount();

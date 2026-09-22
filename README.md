@@ -152,8 +152,6 @@ The package adds two props:
 
 Without `onSubmit`, the component behaves as a regular `TextInput`. With `onSubmit`, single-line inputs default to `returnKeyType="send"` and keep focus on submission. Explicit `returnKeyType`, `submitBehavior`, and `blurOnSubmit` values are respected. `onSubmitEditing` remains available for the standard keyboard event; calling `submit()` does not synthesize that event.
 
-`textColor`, `placeholderColor`, `fontName`, and `fontSize` are supported as legacy aliases. Prefer `style.color`, `placeholderTextColor`, `style.fontFamily`, and `style.fontSize`; the standard props take precedence.
-
 ### Ref methods
 
 `MessageInputRef` includes the native `TextInput` ref methods supported by your React Native version, including `focus()`, `blur()`, `clear()`, `isFocused()`, and measurement methods. Their signatures and return values match `TextInput`.
@@ -183,13 +181,6 @@ All platforms render React Native's `TextInput`.
 On iOS, the module attaches to the underlying `UITextField` or `UITextView`. It commits pending autocorrection, reads the text, and clears it on the UI thread. It also updates React Native's text state and event count, preserving normal input events and controlled-value synchronization.
 
 Android and web submit through React Native input events and the latest text tracked by the component. The iOS autocorrection operation is specific to iOS.
-
-## Migrating from 0.1.x
-
-- `style` now styles the input itself. There is no wrapper or default minimum height; set the size in `style`.
-- `focus()`, `blur()`, and `clear()` use standard `TextInput` return types. `submit()` remains asynchronous.
-- Multiline inputs support newlines; set `submitBehavior="submit"` if Return should send.
-- Rebuild the iOS app after upgrading to include the new native module.
 
 ## Contributing
 
