@@ -8,7 +8,18 @@ import type { TextInputProps } from "react-native";
 import { vi } from "vitest";
 
 export let input: TextInputProps = {};
-export const nativeInput = { clear: vi.fn(), focus: vi.fn(), blur: vi.fn() };
+export const nativeInput = {
+  clear: vi.fn(),
+  focus: vi.fn(),
+  blur: vi.fn(),
+  isFocused: vi.fn(() => true),
+  measure: vi.fn(),
+  measureInWindow: vi.fn(),
+  measureLayout: vi.fn(),
+  setNativeProps: vi.fn(),
+  setSelection: vi.fn(),
+};
+export const findNodeHandle = vi.fn(() => 42);
 
 export function View({ children }: { children: ReactNode }) {
   return createElement("div", null, children);

@@ -1,10 +1,8 @@
 # React Native Message Input
 
-A message input for React Native and Expo that applies iOS keyboard autocorrection before submitting the text and clears the field immediately after.
+React Native's `TextInput` with message submission: apply pending iOS autocorrection, read the text, and clear the field in one native operation.
 
-On iOS, `MessageInput` commits the pending correction, reads the message, and clears the native field in one UI-thread operation. JavaScript receives the text through `onSubmit` after the field is empty. The keyboard stays open for the next message.
-
-Works with the keyboard Send key and custom send buttons. Android and web use React Native's `TextInput` with the same component API.
+Use the standard input props, styles, events, and ref methods. Add `onSubmit` to receive the message after the field has been cleared, or call `ref.current.submit()` from your send button.
 
 ## Installation
 
@@ -98,68 +96,100 @@ const styles = StyleSheet.create({
 
 Pass your message-sending function as `send`. Both the keyboard Send key and the button trigger `onSubmit` with the message text.
 
-### Submission behavior
+### Controlled input
 
-- Leading and trailing whitespace is removed. Empty or whitespace-only submissions are ignored.
-- The field is cleared before `onSubmit` is called. Submission does not dismiss the keyboard.
-- `submissionEnabled={false}` blocks both submission paths while allowing the user to keep editing. It preserves the draft.
-- Sending, loading indicators, errors, and retries belong to your app. The component does not await a network request or restore text after a failed send, so retain the submitted message if you need to retry it.
+Use `value` and `onChangeText` as you would with a regular `TextInput`. Submission calls `onChangeText("")` to keep your state in sync with the cleared field.
+
+```tsx
+import { useState } from "react";
+import { MessageInput } from "@truckroute/message-input";
+
+export function Composer({ send }: { send: (text: string) => void }) {
+  const [text, setText] = useState("");
+
+  return (
+    <MessageInput
+      value={text}
+      onChangeText={setText}
+      onSubmit={send}
+      placeholder="Write a message…"
+      style={{ minHeight: 48, padding: 12, fontSize: 17 }}
+    />
+  );
+}
+```
+
+For uncontrolled input, omit `value`. Use `defaultValue` to provide an initial draft.
+
+### Multiline input
+
+With `multiline`, Return inserts a newline by default. Use your send button to call `submit()`, or set `submitBehavior="submit"` to send with the Return key:
+
+```tsx
+<MessageInput
+  multiline
+  submitBehavior="submit"
+  onSubmit={send}
+  onContentSizeChange={handleContentSizeChange}
+  style={{ minHeight: 48, maxHeight: 160, padding: 12 }}
+/>
+```
 
 ## API
 
 ### Props
 
-Only `onSubmit` is required. The package exports `MessageInputProps` and `MessageInputRef` for TypeScript consumers.
+`MessageInputProps` extends [React Native's `TextInputProps`](https://reactnative.dev/docs/textinput). Props retain their platform and React Native version requirements. This includes `value`, `defaultValue`, `multiline`, `editable`, `autoFocus`, `keyboardType`, `autoCorrect`, `autoCapitalize`, `secureTextEntry`, `selection`, `textContentType`, accessibility props, and input events.
 
-| Prop                 | Type                     | Description                                                              |
-| -------------------- | ------------------------ | ------------------------------------------------------------------------ |
-| `onSubmit`           | `(text: string) => void` | Receives trimmed, nonempty text after the field is cleared.              |
-| `ref`                | `Ref<MessageInputRef>`   | Access to `submit()`, `clear()`, `focus()`, and `blur()`.                |
-| `submissionEnabled`  | `boolean`                | Enables submission. Defaults to `true`; does not disable editing.        |
-| `placeholder`        | `string`                 | Text displayed when the field is empty.                                  |
-| `maxLength`          | `number`                 | Input length limit. On iOS, measured in UTF-16 code units.               |
-| `style`              | `StyleProp<ViewStyle>`   | Outer container styles, including size, padding, border, and background. |
-| `textColor`          | `ColorValue`             | Input text color.                                                        |
-| `placeholderColor`   | `ColorValue`             | Placeholder color.                                                       |
-| `fontName`           | `string`                 | Font name on iOS; `fontFamily` on Android and web.                       |
-| `fontSize`           | `number`                 | Input font size. Defaults to `17` on iOS.                                |
-| `accessibilityLabel` | `string`                 | Accessibility label passed to the underlying input view.                 |
-| `testID`             | `string`                 | Test identifier passed to the underlying input view.                     |
+`style` applies directly to the `TextInput`, including typography, padding, borders, and sizing.
 
-The container has a default minimum height of `44`. Use `style` for layout and the dedicated color and font props for text appearance.
+The package adds two props:
+
+| Prop                | Type                     | Description                                                                                           |
+| ------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `onSubmit`          | `(text: string) => void` | Receives trimmed, nonempty text after the input is cleared. Enables message submission when provided. |
+| `submissionEnabled` | `boolean`                | Enables message submission. Defaults to `true`. Does not disable editing or standard input events.    |
+
+Without `onSubmit`, the component behaves as a regular `TextInput`. With `onSubmit`, single-line inputs default to `returnKeyType="send"` and keep focus on submission. Explicit `returnKeyType`, `submitBehavior`, and `blurOnSubmit` values are respected. `onSubmitEditing` remains available for the standard keyboard event; calling `submit()` does not synthesize that event.
+
+`textColor`, `placeholderColor`, `fontName`, and `fontSize` are supported as legacy aliases. Prefer `style.color`, `placeholderTextColor`, `style.fontFamily`, and `style.fontSize`; the standard props take precedence.
 
 ### Ref methods
 
-All methods return `Promise<void>`.
+`MessageInputRef` includes the native `TextInput` ref methods supported by your React Native version, including `focus()`, `blur()`, `clear()`, `isFocused()`, and measurement methods. Their signatures and return values match `TextInput`.
 
-| Method     | Behavior                                                                                             |
-| ---------- | ---------------------------------------------------------------------------------------------------- |
-| `submit()` | Submits the current text using the same path as the keyboard Send key. Respects `submissionEnabled`. |
-| `clear()`  | Clears the field without calling `onSubmit`.                                                         |
-| `focus()`  | Focuses the field.                                                                                   |
-| `blur()`   | Removes focus and dismisses the keyboard without clearing text or calling `onSubmit`.                |
+The additional `submit(): Promise<void>` method submits the current message and respects `submissionEnabled`. The promise represents the native submission operation, not network delivery.
 
 ```tsx
-await input.current?.focus();
-await input.current?.blur();
-await input.current?.clear();
+input.current?.focus();
+input.current?.blur();
+input.current?.clear();
+const focused = input.current?.isFocused();
 await input.current?.submit();
 ```
 
-`submit()` returns no message or delivery result. Receive the text through `onSubmit` and track delivery in your app.
+### Submission behavior
+
+- Leading and trailing whitespace is removed. Empty or whitespace-only messages are ignored.
+- The field is cleared before `onSubmit` is called. `onChangeText` receives the empty string so controlled state can be updated.
+- `submissionEnabled={false}` preserves the draft and suppresses `onSubmit`; standard keyboard events and explicit blur behavior still apply.
+- Sending, errors, and retries belong to your app. Retain the submitted text if you need to retry a failed request.
+- As with a regular controlled input, the parent owns `value`. If it keeps supplying the old value, React Native can restore that text.
 
 ## Platform behavior
 
-| Platform      | Input implementation     | Submission                                                                                          |
-| ------------- | ------------------------ | --------------------------------------------------------------------------------------------------- |
-| iOS           | Native `UITextField`     | Finalizes editing, reads text, and clears the field on the UI thread before emitting to JavaScript. |
-| Android / web | React Native `TextInput` | Uses React state and React Native input events; clears before calling `onSubmit`.                   |
+All platforms render React Native's `TextInput`.
 
-On iOS, the native field finalizes marked text and moves/restores the selection to commit pending autocorrection. Reading and clearing happen in the same native operation. Android and web handle submission through React Native input events and React state.
+On iOS, the module attaches to the underlying `UITextField` or `UITextView`. It commits pending autocorrection, reads the text, and clears it on the UI thread. It also updates React Native's text state and event count, preserving normal input events and controlled-value synchronization.
 
-The input is single-line and manages its own text. Controlled `value`, `onChangeText`, multiline input, and selection control are not supported.
+Android and web submit through React Native input events and the latest text tracked by the component. The iOS autocorrection operation is specific to iOS.
 
-If you are migrating from a local copy of this module, remove it before installing the package and rebuild the app. Two native modules named `MessageInput` cannot be installed together.
+## Migrating from 0.1.x
+
+- `style` now styles the input itself. There is no wrapper or default minimum height; set the size in `style`.
+- `focus()`, `blur()`, and `clear()` use standard `TextInput` return types. `submit()` remains asynchronous.
+- Multiline inputs support newlines; set `submitBehavior="submit"` if Return should send.
+- Rebuild the iOS app after upgrading to include the new native module.
 
 ## Contributing
 

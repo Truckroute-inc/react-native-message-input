@@ -1,24 +1,20 @@
 import type { Ref } from "react";
-import type { ColorValue, StyleProp, ViewStyle } from "react-native";
+import type { ColorValue, TextInput, TextInputProps } from "react-native";
 
-export type MessageInputRef = {
+export type MessageInputRef = TextInput & {
   submit: () => Promise<void>;
-  clear: () => Promise<void>;
-  focus: () => Promise<void>;
-  blur: () => Promise<void>;
 };
 
-export type MessageInputProps = {
+export type MessageInputProps = TextInputProps & {
   ref?: Ref<MessageInputRef>;
-  onSubmit: (text: string) => void;
+  onSubmit?: (text: string) => void;
   submissionEnabled?: boolean;
-  placeholder?: string;
-  maxLength?: number;
+  /** @deprecated Use style.color. */
   textColor?: ColorValue;
+  /** @deprecated Use placeholderTextColor. */
   placeholderColor?: ColorValue;
+  /** @deprecated Use style.fontFamily. */
   fontName?: string;
+  /** @deprecated Use style.fontSize. */
   fontSize?: number;
-  style?: StyleProp<ViewStyle>;
-  accessibilityLabel?: string;
-  testID?: string;
 };

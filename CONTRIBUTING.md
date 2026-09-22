@@ -15,12 +15,13 @@ The checks run TypeScript, Prettier, and Vitest. Preview the published files wit
 
 [example/composer.tsx](https://github.com/Truckroute-inc/react-native-message-input/blob/main/example/composer.tsx) is a component you can mount in an Expo development app, not a standalone example app. To test the packaged module, create a tarball with `npm pack`, install it in that app, and rebuild iOS.
 
-Automated checks cover TypeScript, formatting, and fallback submission behavior. They do not validate the native keyboard. Before a release, verify on a device:
+Automated checks cover TypeScript, formatting, standard TextInput prop/ref forwarding, controlled and uncontrolled submission, and iOS module event routing. They do not validate the native keyboard. Before a release, verify on a device:
 
 - Pending autocorrection with both the external Send button and keyboard Send key: one corrected message, an empty field, and the keyboard still open.
 - A cursor in the middle of text, emoji, pasted text, English/Russian keyboards, and marked-text input such as Japanese.
 - Empty and disabled submissions, `clear()`, `focus()`, `blur()` preserving the draft, maximum length, and a new draft surviving completion or failure of a previous send.
-- Placeholder, accessibility, light/dark appearance, and Android/web fallback behavior.
+- Controlled and uncontrolled inputs, multiline newlines and Return submission, selection, placeholder, accessibility, light/dark appearance, and Android/web behavior.
+- SDK 52 and the current SDK: install the tarball in a native app, verify autolinking includes the MessageInput pod, and build iOS.
 
 ### Publishing
 

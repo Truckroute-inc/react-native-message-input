@@ -3,42 +3,29 @@ import ExpoModulesCore
 public class MessageInputModule: Module {
   public func definition() -> ModuleDefinition {
     Name("MessageInput")
+    Events("onSubmit")
 
-    View(MessageInputView.self) {
-      Events("onSubmit")
-      Prop("placeholder") { (view: MessageInputView, value: String) in
-        view.field.placeholder = value
+    AsyncFunction("attach") { (tag: Int, identifier: String, enabled: Bool, interceptReturn: Bool) -> Bool in
+      guard let view = self.appContext?.findView(withTag: tag, ofType: UIView.self) else {
+        return false
       }
-      Prop("textColor") { (view: MessageInputView, value: UIColor) in
-        view.field.textColor = value
+      return TRMessageInputController.attach(
+        view: view, identifier: identifier, enabled: enabled, interceptReturn: interceptReturn
+      ) { [weak self] text in
+        self?.sendEvent("onSubmit", ["identifier": identifier, "text": text])
       }
-      Prop("placeholderColor") { (view: MessageInputView, value: UIColor) in
-        view.placeholderColor = value
+    }.runOnQueue(.main)
+
+    AsyncFunction("detach") { (tag: Int, identifier: String) in
+      guard let view = self.appContext?.findView(withTag: tag, ofType: UIView.self) else { return }
+      TRMessageInputController.detach(view: view, identifier: identifier)
+    }.runOnQueue(.main)
+
+    AsyncFunction("submit") { (tag: Int, identifier: String) in
+      guard let view = self.appContext?.findView(withTag: tag, ofType: UIView.self),
+        TRMessageInputController.submit(view: view, identifier: identifier) else {
+        throw Exception(name: "MessageInputUnavailable", description: "MessageInput is no longer mounted.")
       }
-      Prop("fontName") { (view: MessageInputView, value: String) in
-        view.field.font = UIFont(name: value, size: view.field.font?.pointSize ?? 17)
-      }
-      Prop("fontSize") { (view: MessageInputView, value: Double) in
-        view.field.font = view.field.font?.withSize(value)
-      }
-      Prop("maxLength") { (view: MessageInputView, value: Int) in
-        view.maxLength = value
-      }
-      Prop("submissionEnabled") { (view: MessageInputView, value: Bool) in
-        view.submissionEnabled = value
-      }
-      AsyncFunction("submit") { (view: MessageInputView) in view.submit() }
-      AsyncFunction("clear") { (view: MessageInputView) in view.clear() }
-      AsyncFunction("focus") { (view: MessageInputView) in view.field.becomeFirstResponder() }
-      AsyncFunction("blur") { (view: MessageInputView) in
-        _ = view.field.resignFirstResponder()
-      }
-      OnViewDidUpdateProps { (view: MessageInputView) in
-        view.field.attributedPlaceholder = NSAttributedString(
-          string: view.field.placeholder ?? "",
-          attributes: [.foregroundColor: view.placeholderColor]
-        )
-      }
-    }
+    }.runOnQueue(.main)
   }
 }

@@ -13,6 +13,7 @@ Pod::Spec.new do |s|
   s.platforms = { :ios => '16.4' }
   s.static_framework = true
   s.dependency 'ExpoModulesCore'
+  s.dependency 'React-RCTText'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
   s.source_files = '**/*.{h,m,mm,swift,hpp,cpp}'
 end
